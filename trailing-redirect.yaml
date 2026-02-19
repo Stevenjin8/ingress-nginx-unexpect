@@ -1,0 +1,49 @@
+# 10:26:58 (kind-cluster1) /home/sj/blogs/ingress-nginx-unexpected $ curl -vsS -HHost:trailing-slash.example.com 172.19.100.200/bytes    
+# *   Trying 172.19.100.200:80...
+# * Connected to 172.19.100.200 (172.19.100.200) port 80 (#0)
+# > GET /bytes HTTP/1.1
+# > Host:trailing-slash.example.com
+# > User-Agent: curl/7.81.0
+# > Accept: */*
+# > 
+# * Mark bundle as not supporting multiuse
+# < HTTP/1.1 301 Moved Permanently
+# < Date: Thu, 19 Feb 2026 15:27:58 GMT
+# < Content-Type: text/html
+# < Content-Length: 162
+# < Location: http://trailing-slash.example.com/bytes/
+# < Connection: keep-alive
+# < 
+# <html>
+# <head><title>301 Moved Permanently</title></head>
+# <body>
+# <center><h1>301 Moved Permanently</h1></center>
+# <hr><center>nginx</center>
+# </body>
+# </html>
+# * Connection #0 to host 172.19.100.200 left intact
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trailing-slash-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: trailing-slash.example.com
+    http:
+      paths:
+        - path: "/ip/"
+          pathType: Exact
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000
+        - path: "/bytes/"
+          pathType: Prefix
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000
+

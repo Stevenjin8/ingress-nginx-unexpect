@@ -1,0 +1,84 @@
+# $ curl -vsS -HHost:regex-all-prefix.example.com 172.19.100.200/uuid         
+# *   Trying 172.19.100.200:80...
+# * Connected to 172.19.100.200 (172.19.100.200) port 80 (#0)
+# > GET /uuid HTTP/1.1
+# > Host:regex-all-prefix.example.com
+# > User-Agent: curl/7.81.0
+# > Accept: */*
+# > 
+# * Mark bundle as not supporting multiuse
+# < HTTP/1.1 200 OK
+# < Date: Thu, 19 Feb 2026 15:07:47 GMT
+# < Content-Type: application/json; charset=utf-8
+# < Content-Length: 53
+# < Connection: keep-alive
+# < Access-Control-Allow-Credentials: true
+# < Access-Control-Allow-Origin: *
+# < 
+# {
+#   "uuid": "fe6ff65d-8a7d-408e-bcd7-927eb5def489"
+# }
+# * Connection #0 to host 172.19.100.200 left intact
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: regex-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: regex.example.com
+    http:
+      paths:
+        - path: "/UU"
+          pathType: Exact
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000
+---
+# $ curl -vsS -HHost:regex-all-prefix.example.com 172.19.100.200/status/200         
+# *   Trying 172.19.100.200:80...
+# * Connected to 172.19.100.200 (172.19.100.200) port 80 (#0)
+# > GET /uuid HTTP/1.1
+# > Host:regex-all-prefix.example.com
+# > User-Agent: curl/7.81.0
+# > Accept: */*
+# > 
+# * Mark bundle as not supporting multiuse
+# < HTTP/1.1 200 OK
+# < Date: Thu, 19 Feb 2026 15:07:47 GMT
+# < Content-Type: application/json; charset=utf-8
+# < Content-Length: 0
+# < Connection: keep-alive
+# < Access-Control-Allow-Credentials: true
+# < Access-Control-Allow-Origin: *
+# < 
+# * Connection #0 to host 172.19.100.200 left intact
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: regex-ingress-by-host
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: regex.example.com
+    http:
+      paths:
+        - path: "/.*/200"
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000
+        - path: "HEADE"
+          pathType: Exact
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000

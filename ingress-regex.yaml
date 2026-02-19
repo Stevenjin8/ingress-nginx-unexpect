@@ -1,3 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: regex-match-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: regex-match.example.com
+    http:
+      paths:
+        - path: "/[a-z]"
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: httpbin
+              port:
+                number: 8000
+---
 # $ curl -vsS -HHost:regex-all-prefix.example.com 172.19.100.200/uuid         
 # *   Trying 172.19.100.200:80...
 # * Connected to 172.19.100.200 (172.19.100.200) port 80 (#0)
@@ -28,7 +48,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: regex.example.com
+  - host: regex-not-exact.example.com
     http:
       paths:
         - path: "/UU"

@@ -8,10 +8,10 @@ spec:
   - host: path-normalization.example.com
     http:
       paths:
-        - path: "/ip"
-          pathType: Exact
-          backend:
-            service:
-              name: httpbin
-              port:
-                number: 8000
+      - path: "/uuid"
+        pathType: Exact
+        backend:
+          service:
+            name: httpbin
+            port:
+              number: 8000

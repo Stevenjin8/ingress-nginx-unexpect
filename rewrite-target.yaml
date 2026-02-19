@@ -1,16 +1,16 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: regex-match-ingress
+  name: rewrite-target-ingress
   annotations:
-    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: "/uuid"
 spec:
   ingressClassName: nginx
   rules:
-  - host: regex-match.example.com
+  - host: rewrite-target.example.com
     http:
       paths:
-      - path: "/u[A-Z]"
+      - path: "/[abc]"
         pathType: ImplementationSpecific
         backend:
           service:
@@ -21,11 +21,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: regex-match-ingress-other
+  name: rewrite-target-ingress-other
 spec:
   ingressClassName: nginx
   rules:
-  - host: regex-match.example.com
+  - host: rewrite-target.example.com
     http:
       paths:
       - path: "/HEAD"

@@ -39,15 +39,7 @@ We would expect that this Ingress would only match requests with a path of exact
 But the following request shows that this is not the case.
 
 ```bash
-$ curl -iS -HHost:regex-match.example.com 172.19.100.200/uuid
-HTTP/1.1 200 OK
-Date: Thu, 19 Feb 2026 16:55:31 GMT
-Content-Type: application/json; charset=utf-8
-Content-Length: 53
-Connection: keep-alive
-Access-Control-Allow-Credentials: true
-Access-Control-Allow-Origin: *
-
+$ curl -sS -HHost:regex-match.example.com 172.19.100.200/uuid
 {
   "uuid": "e55ef929-25a0-49e9-9175-1b6e87f40af7"
 }
@@ -94,22 +86,16 @@ In other words, the `pathType` is ignored, because of an annotation defined in a
 Since regex patterns are case-insensitive and prefix matches, `/headers` matches the regex pattern of `/HEAD` and is forwarded to `httpbin`, rather than responding with a 404 Not Found as seen below.
 
 ```bash
-$ curl -iS -HHost:regex-match.example.com 172.19.100.200/headers
-
-HTTP/1.1 200 OK
-Date: Thu, 19 Feb 2026 17:13:33 GMT
-Content-Type: application/json; charset=utf-8
-Content-Length: 565
-Connection: keep-alive
-Access-Control-Allow-Credentials: true
-Access-Control-Allow-Origin: *
-
+$ curl -sS -HHost:regex-match.example.com 172.19.100.200/headers
 {
   "headers": {
     ...
   }
 }
 ```
+
+
+> The /headers endpoint of httpbin simply returns the request headers, so the fact that we get a 200 response with a uuid in the body means that our request was successfully routed to httpbin.
 
 Gateway API does not silently convert your `Exact` or `Prefix` matches into regex patterns.
 
@@ -160,30 +146,19 @@ spec:
 Even thought we never use the `nginx.ingress.kubernetes.io/use-regex: "true"` annotation,
 the presence of the `nginx.ingress.kubernetes.io/rewrite-target` annotation in the `rewrite-target-ingress` Ingress causes all paths with the `rewrite-target.example.com` host to be treated as regex patterns.
 
-For example, a request to `/ABCdef` responds with a redirect because `/ABCdef` matches the case insensitive regex pattern of `/[abc]+`:
+For example, a request to `/ABCdef` is rewritten and forwarded to `/uuid` because `/ABCdef` matches the case insensitive regex pattern of `/[abc]+`:
 
 ```bash
-$ curl -iS -HHost:rewrite-target.example.com 172.19.100.200/ABCdef
-HTTP/1.1 308 Permanent Redirect
-Date: Thu, 19 Feb 2026 17:28:44 GMT
-Location: /uuid
-Content-Length: 0
-Connection: keep-alive
+$ curl -sS -HHost:rewrite-target.example.com 172.19.100.200/ABCdef
+{
+  "uuid": "12a0def9-1adg-2943-adcd-1234gadfgc67"
+}
 ```
 
 And, as before, the `path`s of other ingresses with the `rewrite-target.example.com` host are also treated as regex patterns.
 
 ```bash
-$ curl -iS -HHost:regex-match.example.com 172.19.100.200/headers
-
-HTTP/1.1 200 OK
-Date: Thu, 19 Feb 2026 17:13:33 GMT
-Content-Type: application/json; charset=utf-8
-Content-Length: 565
-Connection: keep-alive
-Access-Control-Allow-Credentials: true
-Access-Control-Allow-Origin: *
-
+$ curl -sS -HHost:regex-match.example.com 172.19.100.200/headers
 {
   "headers": {
     ...
@@ -218,15 +193,15 @@ spec:
               number: 8000
 ```
 
-Naively, we would expect Ingress NGINX to respond to `/headers` with a 404 Not Found since the path of `/headers` does not exactly match the `Exact` path of `/headers/`.
-However, Ingress NGINX redirects the request to `/headers/` with a 301 Moved Permanently instead because the difference between `/headers` and `/headers/` is just a trailing slash.
+Naively, we would expect Ingress NGINX to respond to `/header` with a 404 Not Found since the path of `/header` does not exactly match the `Exact` path of `/header/`.
+However, Ingress NGINX redirects the request to `/header/` with a 301 Moved Permanently instead because the difference between `/header` and `/header/` is just a trailing slash.
 
 ```bash
-$ curl -iS -HHost:trailing-slash.example.com 172.19.100.200/header
+$ curl -isS -HHost:trailing-slash.example.com 172.19.100.200/header
 HTTP/1.1 301 Moved Permanently
 Date: Thu, 19 Feb 2026 17:44:55 GMT
-Location: /header/
-Content-Length: 0
+Location: http://trailing-slash.example.com/header/
+Content-Length: 162
 Connection: keep-alive
 ```
 
@@ -253,7 +228,7 @@ spec:
   - host: path-normalization.example.com
     http:
       paths:
-      - path: "/ip"
+      - path: "/uuid"
         pathType: Exact
         backend:
           service:
@@ -262,20 +237,20 @@ spec:
               number: 8000
 ```
 
-Sending request to the following paths will all be normalized to `/ip` and match the `Exact` path of `/ip`, resulting in a 200 OK response or a 301 Moved Permanently to `/ip`.
+Sending request to the following paths will all be normalized to `/uuid` and match the `Exact` path of `/uuid`, resulting in a 200 OK response or a 301 Moved Permanently to `/uuid`.
 
 ```bash
-$ curl -S -HHost:path-normalization.example.com 172.19.100.200/ip
+$ curl -sS -HHost:path-normalization.example.com 172.19.100.200/uuid
 {
-    "origin": "10.0.0.4"
+  "uuid": "29c77dfe-73ec-4449-b70a-ef328ea9dbce"
 }
 
-$ curl -S -HHost:path-normalization.example.com 172.19.100.200/ip/abc/../../ip
+$ curl -sS -HHost:path-normalization.example.com 172.19.100.200/ip/abc/../../uuid
 {
-  "origin": "10.244.0.1"
+  "uuid": "d20d92e8-af57-4014-80ba-cf21c0c4ffae"
 }
 
-$ curl -Si -HHost:path-normalization.example.com 172.19.100.200////ip
+$ curl -sSi -HHost:path-normalization.example.com 172.19.100.200////uuid
 HTTP/1.1 301 Moved Permanently
 Date: Thu, 19 Feb 2026 18:01:38 GMT
 Content-Type: text/html; charset=utf-8
@@ -283,9 +258,9 @@ Content-Length: 38
 Connection: keep-alive
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Origin: *
-Location: /ip
+Location: /uuid
 
-<a href="/ip">Moved Permanently</a>.
+<a href="/uuid">Moved Permanently</a>.
 ```
 
 Your backends might rely on the Ingress/Gateway API implementation path do normaliza paths.

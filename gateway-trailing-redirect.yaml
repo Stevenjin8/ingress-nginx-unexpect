@@ -1,0 +1,27 @@
+# Gateway API equivalent of trailing-redirect.yaml.
+# This route does not inject trailing-slash redirects by itself.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gw-trailing-route
+spec:
+  parentRefs:
+    - name: blog-demo-gateway
+      sectionName: trailing
+  hostnames:
+    - gw-trailing.example.com
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /ip/
+      backendRefs:
+        - name: httpbin
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /bytes/
+      backendRefs:
+        - name: httpbin
+          port: 8000

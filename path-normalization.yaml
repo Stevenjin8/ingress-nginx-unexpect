@@ -1,0 +1,25 @@
+# Baseline exact path
+# $ curl -vsS -HHost:normalize.example.com 172.19.100.200/status/200
+# < HTTP/1.1 200 OK
+#
+# Normalization redirect for double slash when preserving path as-is
+# $ curl -vsS --path-as-is -HHost:normalize.example.com 172.19.100.200/status//200
+# < HTTP/1.1 301 Moved Permanently
+# < Location: http://normalize.example.com/status/200
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: path-normalization-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: normalize.example.com
+    http:
+      paths:
+      - path: /status/200
+        pathType: Exact
+        backend:
+          service:
+            name: httpbin
+            port:
+              number: 8000

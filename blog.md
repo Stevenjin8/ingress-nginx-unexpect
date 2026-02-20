@@ -60,18 +60,20 @@ $ curl -sS -HHost:regex-match.example.com 172.19.100.200/uuid
 }
 ```
 
-> The `/uuid` endpoint of httpbin simply returns a random uuid. A uuid in the body means that the request was successfully routed to httpbin.
+{{< note >}}
+The `/uuid` endpoint of httpbin simply returns a random uuid. A uuid in the body means that the request was successfully routed to httpbin.
+{{< /note >}}
 
 Because Ingress NGINX does [prefix case-insensitive](https://kubernetes.github.io/ingress-nginx/user-guide/ingress-path-matching/) matching, the `/u[A-Z]` pattern will match **any** path that starts with a `u` or `U` followed by any letter, such as `/uuid`.
 As such, Ingress NGINX forwards `/uuid` to `httpbin`, rather than responding with a 404 Not Found.
 In other words, `path: "/u[A-Z]"` is equivalent to `path: "/[uU][a-zA-Z].*"`.
 
-With Gateway API, you can use [`HTTPPathMatch`](https://gateway-api.sigs.k8s.io/reference/spec/#httppathmatch) with a `type` of `RegularExpression` for regular expression path matching.
+With Gateway API, you can use [HTTP path match](https://gateway-api.sigs.k8s.io/reference/spec/#httppathmatch) with a `type` of `RegularExpression` for regular expression path matching.
 `RegularExpression` matches are implementation specific in Gateway API, so check with your Gateway API implementation to verify the semantics of `RegularExpression` matching.
 
 That said, popular Envoy-based Gateway API implementations such as Istio, Envoy Gateway, and Kgateway use  RE2 for their regex flavor and do a full, case-sensitive match.
 
-Thus, an equivalent `HTTPRoute` would look as follows
+Thus, an equivalent HTTP route would look as follows
 
 ```yaml=
 apiVersion: gateway.networking.k8s.io/v1
@@ -94,7 +96,7 @@ spec:
 ```
 
 `[uU][a-zA-Z]` matches a `u` or `U` and then any letter, and `.*` matches any number of any character.
-Alternatively, proxies that use RE2 for their regex engine can also use the `(?i)` flag to indicate case insentive matches, and the pattern could also be `"(?i)/u[A-Z].*"` instead of `"/[uU][a-zA-Z].*"`.
+Alternatively, proxies that use RE2 for their regex engine can also use the `(?i)` flag to indicate case insentive matches, and the pattern could also be `(?i)/u[A-Z].*` instead of `/[uU][a-zA-Z].*`.
 
 ## 3. The `nginx.ingress.kubernetes.io/use-regex` applies to all paths of a host across all (Ingress NGINX) Ingresses
 
@@ -156,10 +158,12 @@ $ curl -sS -HHost:regex-match.example.com 172.19.100.200/headers
 ```
 
 
-> The `/headers` endpoint of httpbin simply returns the request headers. The fact that we get a response with the request headers in the body means that our request was successfully routed to httpbin.
+{{< note >}}
+The `/headers` endpoint of httpbin simply returns the request headers. The fact that we get a response with the request headers in the body means that our request was successfully routed to httpbin.
+{{< /note >}}
 
 Gateway API does not silently convert nor interpret `Exact` and `Prefix` matches into regex patterns.
-The following `HTTPRoute` would response with a 404 Not Found to a `/headers` request.
+The following HTTP route would response with a 404 Not Found to a `/headers` request.
 
 ```yaml=
 apiVersion: gateway.networking.k8s.io/v1
@@ -276,7 +280,7 @@ $ curl -sS -HHost:regex-match.example.com 172.19.100.200/headers
 }
 ```
 
-You can configure path rewrites in Gateway API with the [`HTTPURLRewriteFilter`](https://gateway-api.sigs.k8s.io/reference/spec/#httpurlrewritefilter),
+You can configure path rewrites in Gateway API with the [HTTP URL rewrite filter](https://gateway-api.sigs.k8s.io/reference/spec/#httpurlrewritefilter),
 which will not silently convert your `Exact` and `Prefix` matches into regex patterns.
 
 ```yaml=
@@ -288,7 +292,7 @@ spec:
   hostnames:
   - regex-match.example.com
   parentRefs:
-  - name: my-gateway  # Change this depending on your use case
+  - name: <your-gateway>
   rules:
   - matches:
     - path:
@@ -350,7 +354,7 @@ spec:
         pathType: Exact
         backend:
           service:
-            name: my-backend
+            name: <your-backend>
             port:
               number: 8000
 ```
@@ -370,7 +374,7 @@ The same applies if you change the `pathType` to `Prefix`.
 However, the redirect will not happen if the path is a regex pattern.
 
 Gateway API implementations will not silently redirect requests that are missing a trailing slash to the same path with a trailing slash.
-You can explicitly configure redirects using the [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/reference/spec/#httprequestredirectfilter) as follows
+You can explicitly configure redirects using the [HTTP request redirect filter](https://gateway-api.sigs.k8s.io/reference/spec/#httprequestredirectfilter) as follows
 
 ```yaml=
 apiVersion: gateway.networking.k8s.io/v1
@@ -381,7 +385,7 @@ spec:
   hostnames:
   - trailing-slash.example.com
   parentRefs:
-  - name: my-gateway  # Change this depending on your use case
+  - name: <your-gateway>
   rules:
   - matches:
     - path:
@@ -398,13 +402,13 @@ spec:
         type: Exact  # or Prefix
         value: "/my-path/"
     backendRefs:
-    - name: httpbin
+    - name: <your-backend>
       port: 8000
 ```
 
 ## 5. Ingress NGINX Normalizes URLs
 
-Path normalization is the process of converting a URL into a canonical form before matching it against Ingress rules and forwarding it to a backend.
+*Path normalization* is the process of converting a URL into a canonical form before matching it against Ingress rules and forwarding it to a backend.
 The specifics of URL normalization are defined in [RFC 3986 Section 6.2](https://datatracker.ietf.org/doc/html/rfc3986#section-6.2), but some examples are
 
 * deduplicatin consecutive slashes in a path: `my//path -> my/path`
@@ -465,4 +469,4 @@ As we all race to respond to the Ingress NGINX retirement, I hope this blog post
 SIG Network has also been working on supporting the most common Ingress NGINX annotations (and some of these weird behaviors) in [Ingress2Gateway](https://github.com/kubernetes-sigs/ingress2gateway) to help you translate Ingress NGINX contiguration into Gateway API, and offer alternatives to unsupported behavior.
 We are targeting a 1.0 release with these features late March 2026.
 
-SIG Network is also about to release [Gateway API 1.5](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.5.0-rc.1), which graduates features such as `ListenerSets` that allows app developers to manage TLS certificates and `CORSFilter` that allows CORS configuration.
+SIG Network is also about to release [Gateway API 1.5](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.5.0-rc.1), which graduates features such as Listener sets that allows app developers to manage TLS certificates and the CORS filter that allows CORS configuration.
